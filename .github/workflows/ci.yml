@@ -73,13 +73,14 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python training/train.py
       - name: Verify minimum business KPIs (recall >= 0.60, roc_auc >= 0.80)
-        run: python - <<'PY'
+        run: |
+          python - <<'PY'
           import json
           m = json.load(open("models/metrics.json"))
           assert m["recall"] >= 0.60, m
           assert m["roc_auc"] >= 0.80, m
           print("quality gate OK:", m)
-        PY
+          PY
 
   security-scan:
     needs: lint
