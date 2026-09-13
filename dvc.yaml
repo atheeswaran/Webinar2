@@ -1,0 +1,30 @@
+
+# DVC pipeline: reproducible ML stages.
+# `dvc repro` reruns only stages whose inputs changed.
+stages:
+  prepare:
+    cmd: python data/generate_data.py
+    deps:
+      - data/generate_data.py
+    outs:
+      - data/fraud_data.csv
+  train:
+    cmd: python training/train.py
+    deps:
+      - training/train.py
+      - data/fraud_data.csv
+    outs:
+      - models/model.pkl
+    metrics:
+      - models/metrics.json:
+          cache: false
+  evaluate:
+    cmd: python scripts/evaluate.py models/model.pkl data/fraud_data.csv
+    deps:
+      - scripts/evaluate.py
+      - models/model.pkl
+      - data/fraud_data.csv
+plots:
+  - models/precision_recall.json:
+      x: threshold
+      y: [precision, recall]

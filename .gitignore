@@ -1,0 +1,18 @@
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# MLflow — experiment data (large, regenerable)
+mlruns/
+
+# DVC-managed files (tracked by DVC, not Git)
+data/fraud_data.csv
+models/model.pkl
+model.pkl
+
+# Environment secrets
+.env

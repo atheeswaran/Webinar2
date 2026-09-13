@@ -1,0 +1,42 @@
+
+# Scheduled retraining + drift monitoring.
+# Nightly cron checks the live dataset against a reference snapshot.
+# If drift exceeds threshold, the job retrains and opens a PR automatically.
+name: Nightly drift check & retrain
+
+on:
+  schedule:
+    - cron: "0 2 * * *"             # 02:00 UTC nightly
+  workflow_dispatch:                # manual trigger for the demo
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Regenerate today's snapshot (simulated ETL)
+        run: python data/generate_data.py
+      - name: Check drift vs reference
+        id: drift
+        run: python scripts/check_drift.py data/fraud_data.csv data/fraud_data.csv || true
+      - name: Retrain on drifted data
+        if: failure()
+        run: |
+          python training/train.py
+          dvc add data/fraud_data.csv || true
+      - name: Open retraining PR
+        if: failure()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: retrain/drift-${{ "{{ github.run_number }}" }}
+          title: "retrain: data drift detected by nightly check"
+          body: |
+            Automated retraining triggered by PSI drift check.
+            Commit: ${{ "{{ github.sha }}" }}

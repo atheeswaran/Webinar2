@@ -1,0 +1,7 @@
+
+venv/
+__pycache__/
+mlruns/
+.git/
+.pytest_cache/
+data/fraud_data.csv

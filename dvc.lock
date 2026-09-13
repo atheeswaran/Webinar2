@@ -1,0 +1,49 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python data/generate_data.py
+    deps:
+    - path: data/generate_data.py
+      hash: md5
+      md5: 21bfa32018222c237001a0d2fb90f1cc
+      size: 1826
+    outs:
+    - path: data/fraud_data.csv
+      hash: md5
+      md5: 5e1878843cdc18b480f81b1a215b3bd0
+      size: 49083
+  train:
+    cmd: python training/train.py
+    deps:
+    - path: data/fraud_data.csv
+      hash: md5
+      md5: 5e1878843cdc18b480f81b1a215b3bd0
+      size: 49083
+    - path: training/train.py
+      hash: md5
+      md5: bf7ae53fdc8860d52e64b00658bc977e
+      size: 2919
+    outs:
+    - path: models/metrics.json
+      hash: md5
+      md5: a049c8eea0bff70c4ca11c931d283dad
+      size: 101
+    - path: models/model.pkl
+      hash: md5
+      md5: 3461db17cec842fb0ce8a3d43493ba34
+      size: 2939250
+  evaluate:
+    cmd: python scripts/evaluate.py models/model.pkl data/fraud_data.csv
+    deps:
+    - path: data/fraud_data.csv
+      hash: md5
+      md5: 5e1878843cdc18b480f81b1a215b3bd0
+      size: 49083
+    - path: models/model.pkl
+      hash: md5
+      md5: 3461db17cec842fb0ce8a3d43493ba34
+      size: 2939250
+    - path: scripts/evaluate.py
+      hash: md5
+      md5: 3a53c1e1a43a0b6344f4881b9132dc2b
+      size: 1123

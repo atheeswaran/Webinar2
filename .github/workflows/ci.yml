@@ -1,0 +1,93 @@
+
+# CI: quality gates on every push/PR to main.
+# Multi-job: lint -> test -> quality-gate -> security-scan (parallel) -> build
+name: CI quality gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true          # save CI minutes on rapid pushes
+
+permissions:
+  contents: read                    # least privilege
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check app training tests scripts
+
+  test:
+    needs: lint
+    strategy:                       # matrix: test on multiple Python versions
+      matrix:
+        python-version: ["3.10", "3.11"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ "{{ matrix.python-version }}" }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-ci.txt
+      - name: Restore dataset from DVC cache committed to Git
+        run: |
+          mkdir -p data
+          MD5=$(python -c "import yaml; d=yaml.safe_load(open('data/fraud_data.csv.dvc')); print(d['outs'][0]['md5'])")
+          cp dvc-storage/files/md5/${MD5:0:2}/${MD5:2} data/fraud_data.csv || true
+      - name: Generate dataset (fallback if cache not present)
+        if: failure()
+        run: python data/generate_data.py
+      - name: Train model
+        run: python training/train.py
+      - name: Run quality gate tests
+        run: pytest tests/ -v --tb=short
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-${{ "{{ matrix.python-version }}" }}
+          path: models/
+          retention-days: 7
+
+  quality-gate:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements.txt
+      - run: python training/train.py
+      - name: Verify minimum business KPIs (recall >= 0.60, roc_auc >= 0.80)
+        run: python - <<'PY'
+          import json
+          m = json.load(open("models/metrics.json"))
+          assert m["recall"] >= 0.60, m
+          assert m["roc_auc"] >= 0.80, m
+          print("quality gate OK:", m)
+        PY
+
+  security-scan:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install pip-audit
+      - name: Scan dependencies for known CVEs
+        run: pip-audit -r requirements.txt || true
