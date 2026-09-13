@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ "{{ matrix.python-version }}" }}
+          python-version: 3.11
           cache: pip
       - name: Install dependencies
         run: |
@@ -59,7 +59,7 @@ jobs:
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
         with:
-          name: model-${{ "{{ matrix.python-version }}" }}
+          name: model-3.11
           path: models/
           retention-days: 7
 
