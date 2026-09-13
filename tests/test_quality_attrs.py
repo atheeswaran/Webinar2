@@ -19,7 +19,8 @@ MODEL_PATH = Path("models/model.pkl")
 METRICS_PATH = Path("models/metrics.json")
 DATA_PATH = Path("data/fraud_data.csv")
 
-LATENCY_THRESHOLD_MS = 200     # functional quality gate (Demo 2 tightens to 1)
+#LATENCY_THRESHOLD_MS = 200     # functional quality gate (Demo 2 tightens to 1)
+LATENCY_THRESHOLD_MS = 1  
 
 VALID = {"amount": 250.0, "hour": 14, "age": 34,
          "merchant_risk": 0.4, "distance_from_home": 12.5}
